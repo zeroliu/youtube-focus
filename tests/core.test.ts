@@ -5,6 +5,27 @@ import { emptyUsage, summarize, WINDOW_MS, startUsage, finishUsage } from '../sr
 import { questionsFor } from '../src/classifier';
 const video = { id: 'abcdefghijk', title: 'How electricity works', channel: 'Learning', metadata: '12 minutes' };
 describe('video extraction and decisions', () => {
+  it('reads the heading rather than the earlier thumbnail duration in the live YouTube layout', () => {
+    const tile = document.createElement('div');
+    tile.innerHTML = `<a class="ytLockupViewModelContentImage" href="/watch?v=X117w2Rark8" aria-hidden="true"><span>16:19</span></a>
+      <yt-lockup-metadata-view-model><h3 class="ytLockupMetadataViewModelHeadingReset" title="Jev - The Ultimate Classification Model?">
+        <a class="ytLockupMetadataViewModelTitle" href="/watch?v=X117w2Rark8"><span>Jev - The Ultimate Classification Model?</span></a>
+      </h3><yt-content-metadata-view-model>
+        <div class="ytContentMetadataViewModelMetadataRow"><a href="/@samwitteveenai">Sam Witteveen</a></div>
+        <div class="ytContentMetadataViewModelMetadataRow">132K views • 1 day ago</div>
+      </yt-content-metadata-view-model></yt-lockup-metadata-view-model>`;
+    expect(extractVideo(tile)).toEqual({ id: 'X117w2Rark8', title: 'Jev - The Ultimate Classification Model?', channel: 'Sam Witteveen', metadata: '132K views • 1 day ago' });
+  });
+  it('does not classify a thumbnail before its title has loaded', () => {
+    const tile = document.createElement('div');
+    tile.innerHTML = '<a href="/watch?v=abcdefghijk"><span>12:34</span></a>';
+    expect(extractVideo(tile)).toBeNull();
+  });
+  it('prefers semantic headings even when a legacy thumbnail also matches a known title selector', () => {
+    const tile = document.createElement('div');
+    tile.innerHTML = '<a id="video-title" href="/watch?v=abcdefghijk">12:34</a><h3><a href="/watch?v=abcdefghijk">How electricity works</a></h3>';
+    expect(extractVideo(tile)?.title).toBe('How electricity works');
+  });
   it('extracts classic and current home cards without collecting unrelated page text', () => {
     for (const html of [
       '<a id="video-title-link" href="/watch?v=abcdefghijk" title="How electricity works"></a><ytd-channel-name>Learning</ytd-channel-name><div id="metadata-line">12 minutes</div>',

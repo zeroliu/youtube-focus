@@ -2,7 +2,8 @@ import { test, expect, chromium } from '@playwright/test';
 import path from 'node:path';
 import { mkdtemp, rm } from 'node:fs/promises';
 import os from 'node:os';
-const tile = (id: string, title: string) => `<ytd-rich-item-renderer style="display:block;width:300px;height:210px;position:relative"><div><div style="background:#82a784;height:130px;border-radius:12px"></div><a id="video-title-link" href="/watch?v=${id}" title="${title}">${title}</a><ytd-channel-name>Example channel</ytd-channel-name><div id="metadata-line">12 minutes · 20K views</div></div></ytd-rich-item-renderer>`;
+// Reduced from the signed-in homepage: the thumbnail comes before the title.
+const tile = (id: string, title: string) => `<ytd-rich-item-renderer style="display:block;width:300px;height:210px;position:relative"><div><a class="ytLockupViewModelContentImage" href="/watch?v=${id}" aria-hidden="true" tabindex="-1"><div style="background:#82a784;height:130px;border-radius:12px"></div><span>12:34</span></a><yt-lockup-metadata-view-model><h3 title="${title}"><a class="ytLockupMetadataViewModelTitle" href="/watch?v=${id}">${title}</a></h3><yt-content-metadata-view-model><div class="ytContentMetadataViewModelMetadataRow"><a href="/@example">Example channel</a></div><div class="ytContentMetadataViewModelMetadataRow">20K views • 1 day ago</div></yt-content-metadata-view-model></yt-lockup-metadata-view-model></div></ytd-rich-item-renderer>`;
 test('installed extension dims, reveals, rechecks recycled cards, pauses, and tracks usage', async () => {
   const profile = await mkdtemp(path.join(os.tmpdir(), 'youtube-focus-'));
   const context = await chromium.launchPersistentContext(profile, { channel: 'chromium', headless: true, args: [`--disable-extensions-except=${path.resolve('dist')}`, `--load-extension=${path.resolve('dist')}`] });
@@ -31,7 +32,7 @@ test('installed extension dims, reveals, rechecks recycled cards, pauses, and tr
     await popup.locator('body').screenshot({ path: '.context/popup.png' });
     await page.screenshot({ path: '.context/feed.png' });
     await page.getByRole('button', { name: /Show video/ }).click(); await expect(page.locator('.ytf-dimmed')).toHaveCount(0);
-    await page.locator('ytd-rich-item-renderer').last().evaluate(node => { const a = node.querySelector('a')!; a.setAttribute('href', '/watch?v=music000001'); a.setAttribute('title', 'Music concert'); a.textContent = 'Music concert'; });
+    await page.locator('ytd-rich-item-renderer').last().evaluate(node => { const a = node.querySelector('h3 a')!; a.setAttribute('href', '/watch?v=music000001'); node.querySelector('h3')!.setAttribute('title', 'Music concert'); a.textContent = 'Music concert'; });
     await expect(page.locator('.ytf-dimmed')).toHaveCount(1);
     await expect(popup.locator('#all-requests')).toHaveText('2');
     await popup.locator('#enabled').uncheck(); await expect(page.locator('.ytf-dimmed')).toHaveCount(0);
