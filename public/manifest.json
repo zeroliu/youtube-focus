@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "YouTube Focus",
   "version": "0.1.0",
-  "description": "Describe what you want to watch. Dim the distractions in your YouTube home feed with TypeSafe Jev.",
+  "description": "Describe what you want to watch. Dim the distractions in your YouTube home feed and watch-page recommendations with TypeSafe Jev.",
   "minimum_chrome_version": "120",
   "permissions": [
     "storage"

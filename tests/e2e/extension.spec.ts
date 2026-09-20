@@ -4,7 +4,10 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import os from 'node:os';
 // Reduced from the signed-in homepage: the thumbnail comes before the title.
 const tile = (id: string, title: string) => `<ytd-rich-item-renderer style="display:block;width:300px;height:210px;position:relative"><div><a class="ytLockupViewModelContentImage" href="/watch?v=${id}" aria-hidden="true" tabindex="-1"><div style="background:#82a784;height:130px;border-radius:12px"></div><span>12:34</span></a><yt-lockup-metadata-view-model><h3 title="${title}"><a class="ytLockupMetadataViewModelTitle" href="/watch?v=${id}">${title}</a></h3><yt-content-metadata-view-model><div class="ytContentMetadataViewModelMetadataRow"><a href="/@example">Example channel</a></div><div class="ytContentMetadataViewModelMetadataRow">20K views • 1 day ago</div></yt-content-metadata-view-model></yt-lockup-metadata-view-model></div></ytd-rich-item-renderer>`;
-test('installed extension blocks hover previews, rechecks recycled cards, pauses, and tracks usage', async () => {
+for (const feed of ['home', 'watch']) {
+const cardSelector = feed === 'home' ? 'ytd-rich-item-renderer' : '#related yt-lockup-view-model';
+const feedTile = (id: string, title: string) => feed === 'home' ? tile(id, title) : tile(id, title).replaceAll('ytd-rich-item-renderer', 'yt-lockup-view-model');
+test(`${feed}: installed extension blocks hover previews, rechecks recycled cards, pauses, and tracks usage`, async () => {
   const profile = await mkdtemp(path.join(os.tmpdir(), 'youtube-focus-'));
   const context = await chromium.launchPersistentContext(profile, { channel: 'chromium', headless: true, args: [`--disable-extensions-except=${path.resolve('dist')}`, `--load-extension=${path.resolve('dist')}`] });
   try {
@@ -23,8 +26,8 @@ test('installed extension blocks hover previews, rechecks recycled cards, pauses
       };
       return chrome.storage.local.set({ apiKey: 'test-key' });
     });
-    await context.route('https://www.youtube.com/**', route => route.fulfill({ contentType: 'text/html', body: `<html><body style="font-family:system-ui;background:#fafafa;padding:30px"><h1>YouTube home feed · Test fixture</h1><div style="display:flex;gap:24px">${tile('physics0001', 'Physics explained')}${tile('gaming00001', 'Gaming highlights')}</div></body></html>` }));
-    const page = await context.newPage(); await page.goto('https://www.youtube.com/');
+    await context.route('https://www.youtube.com/**', route => route.fulfill({ contentType: 'text/html', body: `<html><body style="font-family:system-ui;background:#fafafa;padding:30px"><h1>YouTube home feed · Test fixture</h1><div id="related" style="display:flex;gap:24px">${feedTile('physics0001', 'Physics explained')}${feedTile('gaming00001', 'Gaming highlights')}</div></body></html>` }));
+    const page = await context.newPage(); await page.goto(feed === 'home' ? 'https://www.youtube.com/' : 'https://www.youtube.com/watch?v=J3aCGn6SQ1c');
     await expect(page.locator('.ytf-dimmed')).toHaveCount(1);
     await expect(page.locator('.ytf-dimmed')).toContainText('Gaming');
     const dimmedContent = page.locator('.ytf-dimmed > div');
@@ -32,7 +35,7 @@ test('installed extension blocks hover previews, rechecks recycled cards, pauses
     await page.evaluate(() => {
       for (const type of ['mouseover', 'mouseenter', 'mousemove', 'pointerover', 'pointerenter', 'pointermove']) {
         document.addEventListener(type, event => {
-          const card = (event.target as Element).closest?.('ytd-rich-item-renderer');
+          const card = (event.target as Element).closest?.('ytd-rich-item-renderer, yt-lockup-view-model');
           if (card) card.setAttribute('data-preview-triggered', 'true');
         }, true);
       }
@@ -43,8 +46,8 @@ test('installed extension blocks hover previews, rechecks recycled cards, pauses
     await expect(page.locator('.ytf-dimmed')).not.toHaveAttribute('data-preview-triggered');
     await expect(page.locator('.ytf-reveal')).toHaveCount(0);
     // Matched cards keep YouTube's normal hover behavior.
-    await page.locator('ytd-rich-item-renderer').first().hover();
-    await expect(page.locator('ytd-rich-item-renderer').first()).toHaveAttribute('data-preview-triggered', 'true');
+    await page.locator(cardSelector).first().hover();
+    await expect(page.locator(cardSelector).first()).toHaveAttribute('data-preview-triggered', 'true');
     await page.mouse.move(0, 0);
     await expect(dimmedContent).toHaveCSS('opacity', '0.22');
     await expect(page.locator('.ytf-status')).toBeHidden();
@@ -53,7 +56,7 @@ test('installed extension blocks hover previews, rechecks recycled cards, pauses
     await popup.getByRole('radio', { name: 'Hide', exact: true }).check();
     await expect(page.locator('.ytf-hidden')).toHaveCount(1);
     await expect(page.locator('.ytf-hidden')).toBeHidden();
-    await expect(page.locator('ytd-rich-item-renderer').first()).toBeVisible();
+    await expect(page.locator(cardSelector).first()).toBeVisible();
     await expect(popup.locator('#all-requests')).toHaveText('1');
     await popup.reload();
     await expect(popup.getByRole('radio', { name: 'Hide', exact: true })).toBeChecked();
@@ -69,15 +72,15 @@ test('installed extension blocks hover previews, rechecks recycled cards, pauses
     const watchPage = await watchPagePromise;
     await expect(watchPage).toHaveURL(/watch\?v=gaming00001/);
     await watchPage.close();
-    await page.locator('ytd-rich-item-renderer').last().evaluate(node => { const a = node.querySelector('h3 a')!; a.setAttribute('href', '/watch?v=music000001'); node.querySelector('h3')!.setAttribute('title', 'Music concert'); a.textContent = 'Music concert'; });
+    await page.locator(cardSelector).last().evaluate(node => { const a = node.querySelector('h3 a')!; a.setAttribute('href', '/watch?v=music000001'); node.querySelector('h3')!.setAttribute('title', 'Music concert'); a.textContent = 'Music concert'; });
     await expect(page.locator('.ytf-dimmed')).toHaveCount(1);
     await expect(popup.locator('#all-requests')).toHaveText('2');
     await popup.locator('#enabled').uncheck(); await expect(page.locator('.ytf-dimmed')).toHaveCount(0);
     await popup.locator('#enabled').check({ timeout: 5000 }); await expect(page.locator('.ytf-dimmed')).toHaveCount(1);
     await popup.locator('#prompt').fill('Only physics lessons'); await popup.getByRole('button', { name: 'Save preferences' }).click();
     await expect(popup.locator('#all-requests')).toHaveText('4');
-    await page.locator('body').evaluate((body, html) => body.insertAdjacentHTML('beforeend', html), '<div style="height:1000px"></div>' + tile('sports00001', 'Sports highlights'));
-    await page.locator('ytd-rich-item-renderer').last().scrollIntoViewIfNeeded();
+    await page.locator('#related').evaluate((body, html) => body.insertAdjacentHTML('beforeend', html), '<div style="height:1000px"></div>' + feedTile('sports00001', 'Sports highlights'));
+    await page.locator(cardSelector).last().scrollIntoViewIfNeeded();
     await expect(page.locator('.ytf-dimmed')).toHaveCount(2);
     await expect(popup.locator('#all-requests')).toHaveText('5');
     await page.evaluate(() => { history.pushState({}, '', '/results?search_query=physics'); document.dispatchEvent(new Event('yt-navigate-finish')); });
@@ -86,6 +89,7 @@ test('installed extension blocks hover previews, rechecks recycled cards, pauses
     await popup.reload(); await expect(popup.locator('#all-requests')).toHaveText('5');
   } finally { await context.close(); await rm(profile, { recursive: true, force: true }); }
 });
+}
 
 test('late answers do not dim paused feeds; errors remain visible and count as unpriced attempts', async () => {
   const profile = await mkdtemp(path.join(os.tmpdir(), 'youtube-focus-errors-'));
