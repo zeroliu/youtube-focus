@@ -18,7 +18,7 @@ The personal build reads `TYPESAFE_API_KEY` or `JEV_API_KEY` from the workspace 
 3. Pin **YouTube Focus**, open its popup, and save your interests.
 4. Open or reload the YouTube homepage. Videos are checked as you scroll.
 
-The switch pauses filtering immediately. Hovering or keyboard-focusing a dimmed tile makes it easier to read. **Show anyway** restores that video until preferences change or the page reloads. The visibility slider controls how faded other videos appear.
+The switch pauses filtering immediately. Hovering or keyboard-focusing a dimmed tile restores its full brightness and color temporarily. **Show anyway** restores that video until preferences change or the page reloads. The visibility slider controls how faded other videos appear.
 
 `npm run build` makes a shareable build without a key. Enter your own key in its popup. A personal `build:local` places your key in `dist/local-config.json`. Both `.env` and `dist/` are ignored by Git. Do not distribute a personal build. To change its key after installation, save a replacement in the popup; the existing saved key takes precedence over the bootstrap file.
 
@@ -34,6 +34,7 @@ Estimated cost uses returned `usage.input_tokens` at **$0.042 per million input 
 
 - Only regular video tiles on the desktop homepage are evaluated. Search results, subscriptions, watch pages, and Shorts shelves are left alone.
 - A Noul question asks whether each video's main topic and purpose match your prompt, including exclusions. The model sees the prompt plus each video's ID, title, channel, and visible metadata. No cookies, account details, watch history, transcripts, or thumbnail images are sent.
+- Videos start dimmed while Jev checks them, with a small "Sorting snacks for your brain…" toast. Matches brighten as each batch finishes. Pausing or an API error restores unchecked videos.
 - Match probabilities at or below 0.30 are dimmed. Uncertain results stay visible. This initial threshold is deliberately conservative and has not been calibrated on a large labeled feed.
 - API errors leave unchecked videos visible, show a small status message, and back off for one minute. Editing settings or replacing the key allows a fresh attempt.
 - New cards, recycled cards, and YouTube's client-side navigation are observed. Results from outdated preferences or pages are ignored.

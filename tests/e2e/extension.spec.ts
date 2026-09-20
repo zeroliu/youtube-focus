@@ -27,6 +27,14 @@ test('installed extension dims, reveals, rechecks recycled cards, pauses, and tr
     const page = await context.newPage(); await page.goto('https://www.youtube.com/');
     await expect(page.locator('.ytf-dimmed')).toHaveCount(1);
     await expect(page.locator('.ytf-dimmed')).toContainText('Gaming');
+    const dimmedContent = page.locator('.ytf-dimmed > div');
+    await expect(dimmedContent).toHaveCSS('opacity', '0.22');
+    await page.locator('.ytf-dimmed').hover();
+    await expect(dimmedContent).toHaveCSS('opacity', '1');
+    await expect(dimmedContent).toHaveCSS('filter', 'none');
+    await page.mouse.move(0, 0);
+    await expect(dimmedContent).toHaveCSS('opacity', '0.22');
+    await expect(page.locator('.ytf-status')).toBeHidden();
     const popup = await context.newPage(); await popup.goto(`chrome-extension://${extensionId}/popup.html`);
     await expect(popup.locator('#all-requests')).toHaveText('1'); await expect(popup.locator('#all-cost')).toHaveText('$0.000042');
     await popup.locator('body').screenshot({ path: '.context/popup.png' });
@@ -70,6 +78,8 @@ test('late answers do not dim paused feeds; errors remain visible and count as u
     await context.route('https://www.youtube.com/**', route => route.fulfill({ contentType: 'text/html', body: `<html><body>${tile('gaming00001', 'Gaming highlights')}</body></html>` }));
     const page = await context.newPage(); await page.goto('https://www.youtube.com/');
     await expect.poll(() => worker.evaluate(() => (globalThis as any).testCalls)).toBe(1);
+    await expect(page.locator('ytd-rich-item-renderer > div')).toHaveCSS('opacity', '0.22');
+    await expect(page.locator('.ytf-status')).toHaveText('Sorting snacks for your brain…');
     const popup = await context.newPage(); await popup.goto(`chrome-extension://${extensionId}/popup.html`);
     await popup.locator('#enabled').uncheck();
     await worker.evaluate(() => (globalThis as any).release());
@@ -78,6 +88,7 @@ test('late answers do not dim paused feeds; errors remain visible and count as u
     await popup.locator('#prompt').fill('Only science'); await popup.getByRole('button', { name: 'Save preferences' }).click();
     await popup.locator('#enabled').check({ timeout: 5000 });
     await expect(page.locator('.ytf-status')).toContainText('TypeSafe is busy');
+    await expect(page.locator('ytd-rich-item-renderer > div')).toHaveCSS('opacity', '1');
     await expect(page.locator('.ytf-dimmed')).toHaveCount(0);
     await expect(popup.locator('#all-requests')).toHaveText('2');
     await expect(popup.locator('#unpriced')).toContainText('1 request(s)');
