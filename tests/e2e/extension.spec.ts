@@ -104,10 +104,14 @@ test('late answers do not dim paused feeds; errors remain visible and count as u
       };
       return chrome.storage.local.set({ apiKey: 'test-key', settings: { displayMode: 'hide' } });
     });
-    await context.route('https://www.youtube.com/**', route => route.fulfill({ contentType: 'text/html', body: `<html><body>${tile('gaming00001', 'Gaming highlights')}</body></html>` }));
+    await context.route('https://www.youtube.com/**', route => route.fulfill({ contentType: 'text/html', body: `<html><body></body></html>` }));
     const page = await context.newPage(); await page.goto('https://www.youtube.com/');
+    await expect(page.locator('.ytf-status')).toBeVisible();
+    await expect(page.locator('.ytf-status')).toHaveAttribute('data-state', 'loading');
+    await expect.poll(() => worker.evaluate(() => (globalThis as any).testCalls)).toBe(0);
+    await page.locator('body').evaluate((body, html) => body.insertAdjacentHTML('beforeend', html), tile('gaming00001', 'Gaming highlights'));
     await expect.poll(() => worker.evaluate(() => (globalThis as any).testCalls)).toBe(1);
-    await expect(page.locator('ytd-rich-item-renderer > div')).toHaveCSS('opacity', '0.22');
+    await expect(page.locator('ytd-rich-item-renderer')).toBeHidden();
     await expect(page.locator('.ytf-status')).toHaveText('Sorting snacks for your brain…');
     await expect(page.locator('.ytf-hidden')).toHaveCount(0);
     const popup = await context.newPage(); await popup.goto(`chrome-extension://${extensionId}/popup.html`);
@@ -123,5 +127,33 @@ test('late answers do not dim paused feeds; errors remain visible and count as u
     await expect(popup.locator('#all-requests')).toHaveText('2');
     await expect(popup.locator('#unpriced')).toContainText('1 request(s)');
     await expect(popup.locator('#all-cost')).toHaveText('$0.000042');
+  } finally { await context.close(); await rm(profile, { recursive: true, force: true }); }
+});
+
+test('hide mode never paints unchecked cards and reveals only matching results', async () => {
+  const profile = await mkdtemp(path.join(os.tmpdir(), 'youtube-focus-hide-'));
+  const context = await chromium.launchPersistentContext(profile, { channel: 'chromium', headless: true, args: [`--disable-extensions-except=${path.resolve('dist')}`, `--load-extension=${path.resolve('dist')}`] });
+  try {
+    const worker = context.serviceWorkers()[0] ?? await context.waitForEvent('serviceworker');
+    await worker.evaluate(() => {
+      const original = globalThis.fetch;
+      globalThis.fetch = async (input, init) => {
+        if (!String(input).includes('api.typesafe.ai')) return original(input, init);
+        return new Promise(resolve => { (globalThis as any).releaseHide = () => resolve(new Response(JSON.stringify({ model: 'jev-1.13.0', answers: { video_0: { type: 'noul', noul: 0.98 }, video_1: { type: 'noul', noul: 0.02 } }, usage: { input_tokens: 1000, output_tokens: 20 } }), { headers: { 'content-type': 'application/json' } })); });
+      };
+      return chrome.storage.local.set({ apiKey: 'test-key', settings: { displayMode: 'hide' } });
+    });
+    await context.route('https://www.youtube.com/**', route => route.fulfill({ contentType: 'text/html', body: `<html><body>${tile('physics0001', 'Physics explained')}${tile('gaming00001', 'Gaming highlights')}</body></html>` }));
+    const page = await context.newPage(); await page.goto('https://www.youtube.com/');
+    await expect.poll(() => worker.evaluate(() => typeof (globalThis as any).releaseHide)).toBe('function');
+    const cards = page.locator('ytd-rich-item-renderer');
+    await expect(cards.nth(0)).toBeHidden(); await expect(cards.nth(1)).toBeHidden();
+    await expect(page.locator('.ytf-status')).toBeVisible();
+    await worker.evaluate(() => (globalThis as any).releaseHide());
+    await expect(cards.nth(0)).toBeVisible(); await expect(cards.nth(1)).toBeHidden();
+    await expect(cards.nth(0).locator(':scope > div')).toHaveCSS('opacity', '1');
+    await expect(cards.nth(1)).toHaveClass(/ytf-hidden/);
+    await expect(page.locator('.ytf-status')).toHaveText('Brain snacks, sorted.');
+    await expect(page.locator('.ytf-status')).toBeHidden();
   } finally { await context.close(); await rm(profile, { recursive: true, force: true }); }
 });

@@ -18,7 +18,7 @@ The personal build reads `TYPESAFE_API_KEY` or `JEV_API_KEY` from the workspace 
 3. Pin **YouTube Focus**, open its popup, and save your interests.
 4. Open or reload the YouTube homepage. Videos are checked as you scroll.
 
-The switch pauses filtering immediately. Dimmed tiles stay dimmed and do not trigger YouTube hover previews. Click a video to watch it normally. Choose **Dim** or **Hide** in the popup. Hide removes confirmed mismatches from the layout; switch back to Dim to bring them back. The visibility slider controls how faded other videos appear. Display changes reuse the current judgments.
+The switch pauses filtering immediately. Dimmed tiles stay dimmed and do not trigger YouTube hover previews. Click a video to watch it normally. Choose **Dim** or **Hide** in the popup. Hide keeps unchecked videos out of the layout and reveals only matches; switch back to Dim to bring them back. The visibility slider controls how faded other videos appear. Display changes reuse the current judgments.
 
 `npm run build` makes a shareable build without a key. Enter your own key in its popup. A personal `build:local` places your key in `dist/local-config.json`. Both `.env` and `dist/` are ignored by Git. Do not distribute a personal build. To change its key after installation, save a replacement in the popup; the existing saved key takes precedence over the bootstrap file.
 
@@ -34,7 +34,7 @@ Estimated cost uses returned `usage.input_tokens` at **$0.042 per million input 
 
 - Only regular video tiles on the desktop homepage are evaluated. Search results, subscriptions, watch pages, and Shorts shelves are left alone.
 - A Noul question asks whether each video's main topic and purpose match your prompt, including exclusions. The model sees the prompt plus each video's ID, title, channel, and visible metadata. No cookies, account details, watch history, transcripts, or thumbnail images are sent.
-- Videos start dimmed while Jev checks them, with a small "Sorting snacks for your brain…" toast. Matches brighten as each batch finishes. Pausing or an API error restores unchecked videos.
+- Videos start dimmed in Dim mode or hidden in Hide mode while Jev checks them, with a top-center "Sorting snacks for your brain…" toast and spinner. It appears while the feed is loading, stays for at least one second, and briefly confirms "Brain snacks, sorted." when finished. Matches brighten as each batch finishes. Pausing or an API error restores unchecked videos.
 - Match probabilities at or below 0.30 are dimmed. Uncertain results stay visible. This initial threshold is deliberately conservative and has not been calibrated on a large labeled feed.
 - API errors leave unchecked videos visible, show a small status message, and back off for one minute. Editing settings or replacing the key allows a fresh attempt.
 - New cards, recycled cards, and YouTube's client-side navigation are observed. Results from outdated preferences or pages are ignored.
