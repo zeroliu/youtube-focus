@@ -6,7 +6,26 @@ Describe what you want to watch, and YouTube Focus dims or hides videos outside 
   <img src="docs/images/settings.png" alt="YouTube Focus settings with an interests prompt, Dim and Hide controls, visibility slider, API usage, and TypeSafe connection settings" width="400">
 </p>
 
-## Install
+## How to set up
+
+Copy this prompt into your coding agent to get help with setup:
+
+```text
+Help me set up YouTube Focus from https://github.com/zeroliu/youtube-focus.
+Read the README, check that Git and Node.js 20.12 or newer are installed,
+and clone the repo if I don't already have it. Install dependencies with
+npm ci and build the extension with npm run build.
+
+Then walk me through loading the dist folder as an unpacked extension in
+Chrome 120 or newer and pinning YouTube Focus. Help me get a TypeSafe API
+key and enter it directly in the extension's TypeSafe connection settings.
+Ask what I want to watch, help me write my interests, and explain the Dim
+and Hide options. Finish by helping me check that filtering works on YouTube.
+```
+
+Or follow the steps below yourself.
+
+### Install
 
 You'll need Git, [Node.js](https://nodejs.org/) 20.12 or newer, and Chrome 120 or newer.
 
@@ -22,7 +41,7 @@ npm run build
 3. Click **Load unpacked** and select the project's `dist` folder.
 4. Open Chrome's extensions menu and pin **YouTube Focus** for easy access.
 
-## Get your TypeSafe token
+### Get your TypeSafe token
 
 The extension needs your own TypeSafe API key, also called an API token.
 
