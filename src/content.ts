@@ -1,0 +1,78 @@
+import { extractVideo, TILE_SELECTOR } from './dom';
+import { DEFAULT_SETTINGS, fingerprint, settingsFrom, shouldDim, type Settings, type Video, type ClassificationResponse } from './shared';
+let settings: Settings = { ...DEFAULT_SETTINGS, enabled: false };
+let generation = 0;
+let running = false;
+let timer: ReturnType<typeof setTimeout>;
+let retryAt = 0;
+const results = new Map<string, number>();
+const revealed = new Set<string>();
+let status: HTMLDivElement | undefined;
+const onHome = () => location.pathname === '/';
+function tiles() { return [...document.querySelectorAll<HTMLElement>(TILE_SELECTOR)]; }
+function clear(tile: HTMLElement) {
+  tile.classList.remove('ytf-dimmed');
+  tile.querySelector(':scope > .ytf-reveal')?.remove();
+}
+function showStatus(text: string) {
+  if (!status) { status = document.createElement('div'); status.className = 'ytf-status'; status.setAttribute('role', 'status'); document.body.append(status); }
+  if (status.textContent !== text) status.textContent = text;
+  status.hidden = !text;
+}
+function paint(tile: HTMLElement, video: Video) {
+  const key = fingerprint(video);
+  if (tile.dataset.ytfVideo !== key) { clear(tile); tile.dataset.ytfVideo = key; }
+  const dim = shouldDim(results.get(key) ?? NaN) && !revealed.has(key);
+  if (!dim) { clear(tile); return; }
+  tile.classList.add('ytf-dimmed');
+  tile.style.setProperty('--ytf-opacity', String(settings.opacity));
+  if (!tile.querySelector(':scope > .ytf-reveal')) {
+    const button = document.createElement('button');
+    button.type = 'button'; button.className = 'ytf-reveal'; button.textContent = 'Show anyway';
+    button.setAttribute('aria-label', `Show video: ${video.title}`);
+    button.onclick = event => { event.preventDefault(); event.stopPropagation(); revealed.add(key); clear(tile); };
+    tile.append(button);
+  }
+}
+function schedule(delay = 200) { clearTimeout(timer); timer = setTimeout(() => void scan(), delay); }
+async function scan() {
+  if (!onHome() || !settings.enabled || !settings.prompt.trim()) { tiles().forEach(clear); showStatus(''); return; }
+  const candidates = new Map<string, Video>();
+  for (const tile of tiles()) {
+    const video = extractVideo(tile);
+    if (!video) { clear(tile); continue; }
+    paint(tile, video);
+    const box = tile.getBoundingClientRect();
+    if (box.bottom >= -100 && box.top <= innerHeight + 700 && !results.has(fingerprint(video))) candidates.set(fingerprint(video), video);
+  }
+  if (Date.now() < retryAt) { schedule(retryAt - Date.now()); return; }
+  if (running || !candidates.size) return;
+  const batch = [...candidates.values()].slice(0, 12);
+  const currentGeneration = generation;
+  running = true;
+  showStatus('YouTube Focus · Checking videos…');
+  try {
+    const response: ClassificationResponse = await chrome.runtime.sendMessage({ type: 'classify', videos: batch, prompt: settings.prompt });
+    if (generation !== currentGeneration || !onHome()) return;
+    if (response.error) { showStatus(`YouTube Focus · ${response.error}`); retryAt = Date.now() + 60_000; return; }
+    const byId = new Map(response.results.map(result => [result.id, result.probability]));
+    for (const video of batch) { const probability = byId.get(video.id); if (probability !== undefined) results.set(fingerprint(video), probability); }
+    while (results.size > 2000) results.delete(results.keys().next().value!);
+    if (!response.results.length) retryAt = Date.now() + 5000;
+    showStatus('');
+  } catch { showStatus('YouTube Focus · Connection lost. Reload this page to retry.'); retryAt = Date.now() + 60_000; }
+  finally { running = false; schedule(Math.max(100, retryAt - Date.now())); }
+}
+function applySettings(value: Settings) {
+  generation++; settings = settingsFrom(value); results.clear(); revealed.clear(); retryAt = 0;
+  tiles().forEach(clear); schedule();
+}
+chrome.runtime.onMessage.addListener(message => { if (message?.type === 'settingsChanged') applySettings(message.settings); });
+new MutationObserver(mutations => {
+  if (mutations.some(m => !(m.target instanceof Element && (m.target.closest('.ytf-status') || m.target.closest('.ytf-reveal'))) &&
+    (m.type !== 'childList' || [...m.addedNodes, ...m.removedNodes].some(node => !(node instanceof Element && node.matches('.ytf-reveal, .ytf-status')))))) schedule();
+}).observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['href', 'title'] });
+addEventListener('scroll', () => schedule(), { passive: true });
+addEventListener('resize', () => schedule());
+document.addEventListener('yt-navigate-finish', () => { generation++; tiles().forEach(clear); showStatus(''); schedule(); });
+void chrome.runtime.sendMessage({ type: 'settings' }).then(applySettings).catch(() => showStatus('YouTube Focus · Reload this page to connect.'));

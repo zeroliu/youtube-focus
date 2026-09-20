@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "YouTube Focus",
+  "version": "0.1.0",
+  "description": "Describe what you want to watch. Dim the distractions in your YouTube home feed with TypeSafe Jev.",
+  "minimum_chrome_version": "120",
+  "permissions": ["storage"],
+  "host_permissions": ["https://api.typesafe.ai/*", "https://www.youtube.com/*"],
+  "background": {"service_worker": "background.js"},
+  "action": {"default_popup": "popup.html", "default_title": "YouTube Focus"},
+  "content_scripts": [{"matches": ["https://www.youtube.com/*"], "js": ["content.js"], "css": ["content.css"], "run_at": "document_idle"}]
+}
