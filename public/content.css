@@ -1,16 +1,16 @@
-ytd-rich-item-renderer.ytf-dimmed { position: relative; }
-html.ytf-active ytd-rich-item-renderer:not([data-ytf-ready]) > *,
-ytd-rich-item-renderer.ytf-dimmed > * { opacity: var(--ytf-opacity, .22) !important; filter: grayscale(.85); transition: opacity .18s; }
-.ytf-status { position: fixed; top: 122px; left: 50%; transform: translateX(-50%); max-width: min(460px, calc(100vw - 32px)); z-index: 2200; display: flex; align-items: center; gap: 10px; padding: 12px 18px; border: 1px solid #a8d6b86b; border-radius: 24px; background: #203c2ff5; color: #eff9ed; box-shadow: 0 6px 24px #0005; font: 500 13px/1.5 system-ui; pointer-events: none; }
+:is(html[data-ytf-page="home"] ytd-rich-item-renderer, html[data-ytf-page="watch"] #related yt-lockup-view-model, html[data-ytf-page="watch"] #related ytd-compact-video-renderer).ytf-dimmed { position: relative; }
+html.ytf-active :is(html[data-ytf-page="home"] ytd-rich-item-renderer, html[data-ytf-page="watch"] #related yt-lockup-view-model, html[data-ytf-page="watch"] #related ytd-compact-video-renderer):not([data-ytf-ready]) > *,
+:is(html[data-ytf-page="home"] ytd-rich-item-renderer, html[data-ytf-page="watch"] #related yt-lockup-view-model, html[data-ytf-page="watch"] #related ytd-compact-video-renderer).ytf-dimmed > * { opacity: var(--ytf-opacity, .22) !important; filter: grayscale(.85); transition: opacity .18s; }
+.ytf-status { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); max-width: min(460px, calc(100vw - 32px)); z-index: 2200; display: flex; align-items: center; gap: 10px; padding: 12px 18px; border: 1px solid #a8d6b86b; border-radius: 24px; background: #203c2ff5; color: #eff9ed; box-shadow: 0 6px 24px #0005; font: 500 13px/1.5 system-ui; pointer-events: none; }
 .ytf-status[data-state="loading"]::before { content: ''; width: 14px; height: 14px; flex-shrink: 0; border: 2px solid #c2e5c640; border-top-color: #c2e5c6; border-radius: 50%; animation: ytf-spin .75s linear infinite; }
 .ytf-status[data-state="done"]::before { content: '✓'; color: #c2e5c6; }
 @keyframes ytf-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .ytf-status[data-state="loading"]::before { animation: none; } }
 .ytf-status[hidden] { display: none; }
-@media (prefers-reduced-motion: reduce) { ytd-rich-item-renderer.ytf-dimmed > * { transition: none; } }
+@media (prefers-reduced-motion: reduce) { :is(html[data-ytf-page="home"] ytd-rich-item-renderer, html[data-ytf-page="watch"] #related yt-lockup-view-model, html[data-ytf-page="watch"] #related ytd-compact-video-renderer).ytf-dimmed > * { transition: none; } }
 
-ytd-rich-item-renderer.ytf-hidden { display: none !important; }
+:is(html[data-ytf-page="home"] ytd-rich-item-renderer, html[data-ytf-page="watch"] #related yt-lockup-view-model, html[data-ytf-page="watch"] #related ytd-compact-video-renderer).ytf-hidden { display: none !important; }
 
 /* In Hide mode, reveal a card only after its judgment is known. */
-html.ytf-booting ytd-rich-item-renderer,
-html.ytf-active[data-ytf-mode="hide"] ytd-rich-item-renderer:not([data-ytf-ready]) { display: none !important; }
+html.ytf-booting :is(html[data-ytf-page="home"] ytd-rich-item-renderer, html[data-ytf-page="watch"] #related yt-lockup-view-model, html[data-ytf-page="watch"] #related ytd-compact-video-renderer),
+html.ytf-active[data-ytf-mode="hide"] :is(html[data-ytf-page="home"] ytd-rich-item-renderer, html[data-ytf-page="watch"] #related yt-lockup-view-model, html[data-ytf-page="watch"] #related ytd-compact-video-renderer):not([data-ytf-ready]) { display: none !important; }

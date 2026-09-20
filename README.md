@@ -1,6 +1,6 @@
 <h1 align="center">YouTube Focus</h1>
 
-Describe what you want to watch, and YouTube Focus dims or hides videos outside your interests on the YouTube homepage. This Chrome extension uses [TypeSafe AI](https://typesafe.ai)'s Jev model to match recommendations to your preferences.
+Describe what you want to watch, and YouTube Focus dims or hides videos outside your interests on the YouTube homepage and in watch-page recommendations. This Chrome extension uses [TypeSafe AI](https://typesafe.ai)'s Jev model to match recommendations to your preferences.
 
 <p align="center">
   <img src="docs/images/settings.png" alt="YouTube Focus settings with an interests prompt, Dim and Hide controls, visibility slider, API usage, and TypeSafe connection settings" width="400">
@@ -42,11 +42,11 @@ Your key is stored locally in your Chrome profile. API requests use your TypeSaf
 2. Choose what happens to unrelated videos:
    - **Dim** fades them while keeping them clickable. Adjust **Dimmed video visibility** to set how faint they appear.
    - **Hide** removes them from the feed layout.
-3. Click **Save preferences**, then open or reload the [YouTube homepage](https://www.youtube.com/). Videos are checked as you scroll, and future preference changes update the feed automatically.
+3. Click **Save preferences**, then open or reload the [YouTube homepage](https://www.youtube.com/) or a video watch page. Videos are checked as you scroll, and future preference changes update the feed automatically.
 
 Use the switch at the top to pause filtering and show every video again. **API usage** shows request counts and estimated spending for the last 30 days and all time, for this extension in this Chrome profile. Cached results don't add API requests.
 
-Filtering applies to regular videos on the desktop homepage. Search results, subscriptions, watch pages, and Shorts shelves are left alone. Videos start dimmed or hidden while they're checked; if an API request fails, unchecked videos become visible again.
+Filtering applies to regular videos on the desktop homepage and in the recommended area beside or below a playing video. The player, search results, subscriptions, and Shorts shelves are left alone. Videos start dimmed or hidden while they're checked; if an API request fails, unchecked videos become visible again.
 
 ## What gets sent to TypeSafe?
 

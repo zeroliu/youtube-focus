@@ -12,22 +12,23 @@ const results = new Map<string, number>();
 const status = createFeedStatus();
 let awaitingFeed = true;
 let feedWaitUntil = Date.now() + 15_000;
-const onHome = () => location.pathname === '/';
+const onFeed = () => location.pathname === '/' || location.pathname === '/watch';
 function updateAppearance() {
-  document.documentElement.classList.toggle('ytf-booting', onHome() && !settingsLoaded && !failed);
+  document.documentElement.dataset.ytfPage = location.pathname === '/' ? 'home' : location.pathname === '/watch' ? 'watch' : 'other';
+  document.documentElement.classList.toggle('ytf-booting', onFeed() && !settingsLoaded && !failed);
   document.documentElement.dataset.ytfMode = settings.displayMode;
-  document.documentElement.classList.toggle('ytf-active', onHome() && settings.enabled && !!settings.prompt.trim() && !failed);
+  document.documentElement.classList.toggle('ytf-active', onFeed() && settings.enabled && !!settings.prompt.trim() && !failed);
   document.documentElement.style.setProperty('--ytf-opacity', String(settings.opacity));
 }
 updateAppearance();
-if (onHome()) status.start();
+if (onFeed()) status.start();
 
 // Intercept preview triggers before YouTube's document/thumbnail handlers.
 // Keep mouseout/leave events intact so existing previews can clean up, and
 // leave clicks and keyboard interaction alone so every video stays watchable.
 for (const type of ['mouseover', 'mouseenter', 'mousemove', 'pointerover', 'pointerenter', 'pointermove']) {
   window.addEventListener(type, event => {
-    if (!onHome() || !settings.enabled || !settings.prompt.trim()) return;
+    if (!onFeed() || !settings.enabled || !settings.prompt.trim()) return;
     const tile = event.target instanceof Element ? event.target.closest(TILE_SELECTOR) : null;
     if (tile && (tile.classList.contains('ytf-dimmed') ||
       (document.documentElement.classList.contains('ytf-active') && !tile.hasAttribute('data-ytf-ready')))) {
@@ -58,7 +59,7 @@ function schedule(delay = 200) { clearTimeout(timer); timer = setTimeout(() => v
 async function scan() {
   if (!settingsLoaded) return;
   updateAppearance();
-  if (!onHome() || !settings.enabled || !settings.prompt.trim()) { tiles().forEach(clear); status.hide(); return; }
+  if (!onFeed() || !settings.enabled || !settings.prompt.trim()) { document.querySelectorAll<HTMLElement>('[data-ytf-video]').forEach(clear); status.hide(); return; }
   const candidates = new Map<string, Video>();
   for (const tile of tiles()) {
     const video = extractVideo(tile);
@@ -84,7 +85,7 @@ async function scan() {
   status.start();
   try {
     const response: ClassificationResponse = await chrome.runtime.sendMessage({ type: 'classify', videos: batch, prompt: settings.prompt });
-    if (generation !== currentGeneration || !onHome()) return;
+    if (generation !== currentGeneration || !onFeed()) return;
     if (response.error) { failed = true; updateAppearance(); status.error(`YouTube Focus · ${response.error}`); retryAt = Date.now() + 60_000; return; }
     const byId = new Map(response.results.map(result => [result.id, result.probability]));
     for (const video of batch) { const probability = byId.get(video.id); if (probability !== undefined) results.set(fingerprint(video), probability); }
@@ -99,7 +100,7 @@ function applySettings(value: Settings) {
   if (next.prompt !== settings.prompt || next.enabled !== settings.enabled) { generation++; results.clear(); }
   settingsLoaded = true; failed = false;
   settings = next; retryAt = 0;
-  tiles().forEach(clear); updateAppearance(); void scan();
+  document.querySelectorAll<HTMLElement>('[data-ytf-video]').forEach(clear); updateAppearance(); void scan();
 }
 chrome.runtime.onMessage.addListener(message => { if (message?.type === 'settingsChanged') applySettings(message.settings); });
 new MutationObserver(mutations => {
@@ -110,6 +111,6 @@ addEventListener('scroll', () => schedule(), { passive: true });
 addEventListener('resize', () => schedule());
 addEventListener('load', () => schedule());
 document.addEventListener('DOMContentLoaded', () => void scan(), { once: true });
-document.addEventListener('yt-navigate-start', () => { if (onHome() && settings.enabled) status.start(); });
-document.addEventListener('yt-navigate-finish', () => { generation++; awaitingFeed = true; feedWaitUntil = Date.now() + 15_000; tiles().forEach(clear); updateAppearance(); if (onHome() && settings.enabled) status.start(); else status.hide(); schedule(); });
+document.addEventListener('yt-navigate-start', () => { if (onFeed() && settings.enabled) status.start(); });
+document.addEventListener('yt-navigate-finish', () => { generation++; awaitingFeed = true; feedWaitUntil = Date.now() + 15_000; document.querySelectorAll<HTMLElement>('[data-ytf-video]').forEach(clear); updateAppearance(); if (onFeed() && settings.enabled) status.start(); else status.hide(); schedule(); });
 void chrome.runtime.sendMessage({ type: 'settings' }).then(applySettings).catch(() => { failed = true; updateAppearance(); status.error('YouTube Focus · Reload this page to connect.'); });
