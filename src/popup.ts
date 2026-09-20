@@ -11,7 +11,6 @@ function showDisplayMode() {
   el('opacity-controls').hidden = saved.displayMode === 'hide';
 }
 let saved: Settings;
-function mode() { el('mode').textContent = enabled.checked ? 'FOCUS ON' : 'PAUSED'; }
 async function refreshUsage() {
   const { usage, apiKey } = await chrome.storage.local.get(['usage', 'apiKey']);
   const totals = summarize(usage as Usage | undefined ?? emptyUsage());
@@ -26,7 +25,7 @@ async function init() {
   const value = await chrome.storage.local.get('settings');
   saved = settingsFrom(value.settings);
   prompt.value = saved.prompt; enabled.checked = saved.enabled; opacity.value = String(Math.round(saved.opacity * 100));
-  el('opacity-value').textContent = `${opacity.value}%`; mode(); showDisplayMode(); await refreshUsage();
+  el('opacity-value').textContent = `${opacity.value}%`; showDisplayMode(); await refreshUsage();
 }
 for (const radio of displayModes) radio.onchange = async () => {
   saved = { ...saved, displayMode: radio.value === 'hide' ? 'hide' : 'dim' };
@@ -36,7 +35,7 @@ for (const radio of displayModes) radio.onchange = async () => {
 };
 opacity.oninput = () => { el('opacity-value').textContent = `${opacity.value}%`; };
 enabled.onchange = async () => {
-  mode(); saved = { ...saved, enabled: enabled.checked };
+  saved = { ...saved, enabled: enabled.checked };
   try { await chrome.storage.local.set({ settings: saved }); feedback.textContent = enabled.checked ? 'Filtering is on.' : 'Paused. All videos stay visible.'; }
   catch { feedback.textContent = 'Could not save. Try again.'; }
 };
