@@ -1,5 +1,5 @@
 export const DEFAULT_PROMPT = 'I want educational videos that teach me something. No video games, sports, music, celebrity gossip, or entertainment-only videos.';
-export const DEFAULT_SETTINGS = { prompt: DEFAULT_PROMPT, enabled: true, opacity: 0.22 };
+export const DEFAULT_SETTINGS = { prompt: DEFAULT_PROMPT, enabled: true, opacity: 0.22, displayMode: 'dim' as 'dim' | 'hide' };
 export type Settings = typeof DEFAULT_SETTINGS;
 export interface Video { id: string; title: string; channel: string; metadata: string }
 export interface Verdict { id: string; probability: number }
@@ -9,6 +9,7 @@ export function settingsFrom(input: unknown = {}): Settings {
   return {
     prompt: typeof value.prompt === 'string' ? value.prompt.slice(0, 2000) : DEFAULT_PROMPT,
     enabled: typeof value.enabled === 'boolean' ? value.enabled : true,
+    displayMode: value.displayMode === 'hide' ? 'hide' : 'dim',
     opacity: typeof value.opacity === 'number' && Number.isFinite(value.opacity) ? Math.max(0.1, Math.min(0.5, value.opacity)) : 0.22,
   };
 }

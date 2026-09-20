@@ -4,7 +4,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import os from 'node:os';
 // Reduced from the signed-in homepage: the thumbnail comes before the title.
 const tile = (id: string, title: string) => `<ytd-rich-item-renderer style="display:block;width:300px;height:210px;position:relative"><div><a class="ytLockupViewModelContentImage" href="/watch?v=${id}" aria-hidden="true" tabindex="-1"><div style="background:#82a784;height:130px;border-radius:12px"></div><span>12:34</span></a><yt-lockup-metadata-view-model><h3 title="${title}"><a class="ytLockupMetadataViewModelTitle" href="/watch?v=${id}">${title}</a></h3><yt-content-metadata-view-model><div class="ytContentMetadataViewModelMetadataRow"><a href="/@example">Example channel</a></div><div class="ytContentMetadataViewModelMetadataRow">20K views • 1 day ago</div></yt-content-metadata-view-model></yt-lockup-metadata-view-model></div></ytd-rich-item-renderer>`;
-test('installed extension dims, reveals, rechecks recycled cards, pauses, and tracks usage', async () => {
+test('installed extension blocks hover previews, rechecks recycled cards, pauses, and tracks usage', async () => {
   const profile = await mkdtemp(path.join(os.tmpdir(), 'youtube-focus-'));
   const context = await chromium.launchPersistentContext(profile, { channel: 'chromium', headless: true, args: [`--disable-extensions-except=${path.resolve('dist')}`, `--load-extension=${path.resolve('dist')}`] });
   try {
@@ -29,17 +29,46 @@ test('installed extension dims, reveals, rechecks recycled cards, pauses, and tr
     await expect(page.locator('.ytf-dimmed')).toContainText('Gaming');
     const dimmedContent = page.locator('.ytf-dimmed > div');
     await expect(dimmedContent).toHaveCSS('opacity', '0.22');
+    await page.evaluate(() => {
+      for (const type of ['mouseover', 'mouseenter', 'mousemove', 'pointerover', 'pointerenter', 'pointermove']) {
+        document.addEventListener(type, event => {
+          const card = (event.target as Element).closest?.('ytd-rich-item-renderer');
+          if (card) card.setAttribute('data-preview-triggered', 'true');
+        }, true);
+      }
+    });
     await page.locator('.ytf-dimmed').hover();
-    await expect(dimmedContent).toHaveCSS('opacity', '1');
-    await expect(dimmedContent).toHaveCSS('filter', 'none');
+    await expect(dimmedContent).toHaveCSS('opacity', '0.22');
+    await expect(dimmedContent).toHaveCSS('filter', 'grayscale(0.85)');
+    await expect(page.locator('.ytf-dimmed')).not.toHaveAttribute('data-preview-triggered');
+    await expect(page.locator('.ytf-reveal')).toHaveCount(0);
+    // Matched cards keep YouTube's normal hover behavior.
+    await page.locator('ytd-rich-item-renderer').first().hover();
+    await expect(page.locator('ytd-rich-item-renderer').first()).toHaveAttribute('data-preview-triggered', 'true');
     await page.mouse.move(0, 0);
     await expect(dimmedContent).toHaveCSS('opacity', '0.22');
     await expect(page.locator('.ytf-status')).toBeHidden();
     const popup = await context.newPage(); await popup.goto(`chrome-extension://${extensionId}/popup.html`);
     await expect(popup.locator('#all-requests')).toHaveText('1'); await expect(popup.locator('#all-cost')).toHaveText('$0.000042');
+    await popup.getByRole('radio', { name: 'Hide', exact: true }).check();
+    await expect(page.locator('.ytf-hidden')).toHaveCount(1);
+    await expect(page.locator('.ytf-hidden')).toBeHidden();
+    await expect(page.locator('ytd-rich-item-renderer').first()).toBeVisible();
+    await expect(popup.locator('#all-requests')).toHaveText('1');
+    await popup.reload();
+    await expect(popup.getByRole('radio', { name: 'Hide', exact: true })).toBeChecked();
+    await popup.getByRole('radio', { name: 'Dim', exact: true }).check();
+    await expect(page.locator('.ytf-hidden')).toHaveCount(0);
+    await expect(page.locator('.ytf-dimmed')).toBeVisible();
+    await expect(popup.locator('#all-requests')).toHaveText('1');
     await popup.locator('body').screenshot({ path: '.context/popup.png' });
     await page.screenshot({ path: '.context/feed.png' });
-    await page.getByRole('button', { name: /Show video/ }).click(); await expect(page.locator('.ytf-dimmed')).toHaveCount(0);
+    // Blocking hover must not block deliberate navigation.
+    const watchPagePromise = context.waitForEvent('page');
+    await page.locator('.ytf-dimmed h3 a').click({ modifiers: ['Meta'] });
+    const watchPage = await watchPagePromise;
+    await expect(watchPage).toHaveURL(/watch\?v=gaming00001/);
+    await watchPage.close();
     await page.locator('ytd-rich-item-renderer').last().evaluate(node => { const a = node.querySelector('h3 a')!; a.setAttribute('href', '/watch?v=music000001'); node.querySelector('h3')!.setAttribute('title', 'Music concert'); a.textContent = 'Music concert'; });
     await expect(page.locator('.ytf-dimmed')).toHaveCount(1);
     await expect(popup.locator('#all-requests')).toHaveText('2');
@@ -73,13 +102,14 @@ test('late answers do not dim paused feeds; errors remain visible and count as u
         if ((globalThis as any).testCalls > 1) return new Response('{}', { status: 429 });
         return new Promise(resolve => { (globalThis as any).release = () => resolve(new Response(JSON.stringify({ model: 'jev-1.13.0', answers: { video_0: { type: 'noul', noul: 0.02 } }, usage: { input_tokens: 1000, output_tokens: 10 } }), { headers: { 'content-type': 'application/json' } })); });
       };
-      return chrome.storage.local.set({ apiKey: 'test-key' });
+      return chrome.storage.local.set({ apiKey: 'test-key', settings: { displayMode: 'hide' } });
     });
     await context.route('https://www.youtube.com/**', route => route.fulfill({ contentType: 'text/html', body: `<html><body>${tile('gaming00001', 'Gaming highlights')}</body></html>` }));
     const page = await context.newPage(); await page.goto('https://www.youtube.com/');
     await expect.poll(() => worker.evaluate(() => (globalThis as any).testCalls)).toBe(1);
     await expect(page.locator('ytd-rich-item-renderer > div')).toHaveCSS('opacity', '0.22');
     await expect(page.locator('.ytf-status')).toHaveText('Sorting snacks for your brain…');
+    await expect(page.locator('.ytf-hidden')).toHaveCount(0);
     const popup = await context.newPage(); await popup.goto(`chrome-extension://${extensionId}/popup.html`);
     await popup.locator('#enabled').uncheck();
     await worker.evaluate(() => (globalThis as any).release());

@@ -8,7 +8,6 @@ let running = false;
 let timer: ReturnType<typeof setTimeout>;
 let retryAt = 0;
 const results = new Map<string, number>();
-const revealed = new Set<string>();
 let status: HTMLDivElement | undefined;
 const onHome = () => location.pathname === '/';
 function updateAppearance() {
@@ -16,11 +15,25 @@ function updateAppearance() {
   document.documentElement.style.setProperty('--ytf-opacity', String(settings.opacity));
 }
 updateAppearance();
+
+// Intercept preview triggers before YouTube's document/thumbnail handlers.
+// Keep mouseout/leave events intact so existing previews can clean up, and
+// leave clicks and keyboard interaction alone so every video stays watchable.
+for (const type of ['mouseover', 'mouseenter', 'mousemove', 'pointerover', 'pointerenter', 'pointermove']) {
+  window.addEventListener(type, event => {
+    if (!onHome() || !settings.enabled || !settings.prompt.trim()) return;
+    const tile = event.target instanceof Element ? event.target.closest(TILE_SELECTOR) : null;
+    if (tile && (tile.classList.contains('ytf-dimmed') ||
+      (document.documentElement.classList.contains('ytf-active') && !tile.hasAttribute('data-ytf-ready')))) {
+      event.stopImmediatePropagation();
+    }
+  }, { capture: true });
+}
+
 function tiles() { return [...document.querySelectorAll<HTMLElement>(TILE_SELECTOR)]; }
 function clear(tile: HTMLElement) {
-  tile.classList.remove('ytf-dimmed');
+  tile.classList.remove('ytf-dimmed', 'ytf-hidden');
   delete tile.dataset.ytfReady;
-  tile.querySelector(':scope > .ytf-reveal')?.remove();
 }
 function showStatus(text: string) {
   if (!document.body) return;
@@ -32,19 +45,14 @@ function paint(tile: HTMLElement, video: Video) {
   const key = fingerprint(video);
   if (tile.dataset.ytfVideo !== key) { clear(tile); tile.dataset.ytfVideo = key; }
   const probability = results.get(key);
-  const ready = probability !== undefined || revealed.has(key);
-  const dim = shouldDim(probability ?? NaN) && !revealed.has(key);
+  const ready = probability !== undefined;
+  const dim = shouldDim(probability ?? NaN);
   if (!dim) { clear(tile); if (ready) tile.dataset.ytfReady = 'true'; return; }
   tile.dataset.ytfReady = 'true';
   tile.classList.add('ytf-dimmed');
+  tile.classList.toggle('ytf-hidden', settings.displayMode === 'hide');
   tile.style.setProperty('--ytf-opacity', String(settings.opacity));
-  if (!tile.querySelector(':scope > .ytf-reveal')) {
-    const button = document.createElement('button');
-    button.type = 'button'; button.className = 'ytf-reveal'; button.textContent = 'Show anyway';
-    button.setAttribute('aria-label', `Show video: ${video.title}`);
-    button.onclick = event => { event.preventDefault(); event.stopPropagation(); revealed.add(key); clear(tile); tile.dataset.ytfReady = 'true'; };
-    tile.append(button);
-  }
+
 }
 function schedule(delay = 200) { clearTimeout(timer); timer = setTimeout(() => void scan(), delay); }
 async function scan() {
@@ -80,14 +88,16 @@ async function scan() {
   finally { running = false; schedule(Math.max(100, retryAt - Date.now())); }
 }
 function applySettings(value: Settings) {
+  const next = settingsFrom(value);
+  if (next.prompt !== settings.prompt || next.enabled !== settings.enabled) { generation++; results.clear(); }
   settingsLoaded = true; failed = false;
-  generation++; settings = settingsFrom(value); results.clear(); revealed.clear(); retryAt = 0;
+  settings = next; retryAt = 0;
   tiles().forEach(clear); updateAppearance(); void scan();
 }
 chrome.runtime.onMessage.addListener(message => { if (message?.type === 'settingsChanged') applySettings(message.settings); });
 new MutationObserver(mutations => {
-  if (mutations.some(m => !(m.target instanceof Element && (m.target.closest('.ytf-status') || m.target.closest('.ytf-reveal'))) &&
-    (m.type !== 'childList' || [...m.addedNodes, ...m.removedNodes].some(node => !(node instanceof Element && node.matches('.ytf-reveal, .ytf-status')))))) schedule();
+  if (mutations.some(m => !(m.target instanceof Element && (m.target.closest('.ytf-status'))) &&
+    (m.type !== 'childList' || [...m.addedNodes, ...m.removedNodes].some(node => !(node instanceof Element && node.matches('.ytf-status')))))) schedule();
 }).observe(document.documentElement, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['href', 'title'] });
 addEventListener('scroll', () => schedule(), { passive: true });
 addEventListener('resize', () => schedule());

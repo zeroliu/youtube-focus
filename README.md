@@ -18,7 +18,7 @@ The personal build reads `TYPESAFE_API_KEY` or `JEV_API_KEY` from the workspace 
 3. Pin **YouTube Focus**, open its popup, and save your interests.
 4. Open or reload the YouTube homepage. Videos are checked as you scroll.
 
-The switch pauses filtering immediately. Hovering or keyboard-focusing a dimmed tile restores its full brightness and color temporarily. **Show anyway** restores that video until preferences change or the page reloads. The visibility slider controls how faded other videos appear.
+The switch pauses filtering immediately. Dimmed tiles stay dimmed and do not trigger YouTube hover previews. Click a video to watch it normally. Choose **Dim** or **Hide** in the popup. Hide removes confirmed mismatches from the layout; switch back to Dim to bring them back. The visibility slider controls how faded other videos appear. Display changes reuse the current judgments.
 
 `npm run build` makes a shareable build without a key. Enter your own key in its popup. A personal `build:local` places your key in `dist/local-config.json`. Both `.env` and `dist/` are ignored by Git. Do not distribute a personal build. To change its key after installation, save a replacement in the popup; the existing saved key takes precedence over the bootstrap file.
 
@@ -53,7 +53,7 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-The browser test installs the real unpacked extension into a disposable Chromium profile. It exercises the popup, worker, SDK, storage, content script, dim/reveal controls, recycled tiles, preference changes, SPA navigation, and API totals. Its YouTube page and API responses are fixtures; it does not claim to validate your signed-in recommendations.
+The browser test installs the real unpacked extension into a disposable Chromium profile. It exercises the popup, worker, SDK, storage, content script, dimming and hover-preview blocking, recycled tiles, preference changes, SPA navigation, and API totals. Its YouTube page and API responses are fixtures; it does not claim to validate your signed-in recommendations.
 
 ```sh
 node scripts/live-smoke.mjs

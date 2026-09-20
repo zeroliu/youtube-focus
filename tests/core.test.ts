@@ -43,6 +43,9 @@ describe('video extraction and decisions', () => {
     expect(validVideos([video])).toBe(true); expect(validVideos(Array(13).fill(video))).toBe(false);
     expect(validVideos([{ ...video, title: '' }])).toBe(false); expect(settingsFrom({ opacity: 0 })).toMatchObject({ opacity: 0.1 });
     expect(settingsFrom(null).enabled).toBe(true);
+    expect(settingsFrom({}).displayMode).toBe('dim');
+    expect(settingsFrom({ displayMode: 'hide' }).displayMode).toBe('hide');
+    expect(settingsFrom({ displayMode: 'invalid' }).displayMode).toBe('dim');
   });
   it('asks an independent question for each indexed video with exclusions', () => {
     const questions = questionsFor([video, { ...video, id: '12345678901' }]);

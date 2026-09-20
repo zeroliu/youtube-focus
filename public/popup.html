@@ -5,10 +5,13 @@
 <main><form id="preferences">
 <div class="section-label"><label for="prompt">What do you want to watch?</label><span id="mode">FOCUS ON</span></div>
 <textarea id="prompt" maxlength="2000" rows="5" placeholder="Describe your interests, and what you’d rather skip." required></textarea>
-<p class="hint">Matches stay bright. Other videos fade, but are always there to watch.</p>
+<p class="hint">Keep what interests you. Choose what happens to the rest.</p>
+<fieldset class="display-mode"><legend>Unrelated videos</legend><label><input type="radio" name="display-mode" value="dim" checked><span>Dim</span></label><label><input type="radio" name="display-mode" value="hide"><span>Hide</span></label></fieldset>
+<div id="opacity-controls">
 <div class="slider-label"><label for="opacity">Dimmed video visibility</label><output id="opacity-value" for="opacity">22%</output></div>
 <input id="opacity" type="range" min="10" max="50" value="22">
 <div class="range-labels"><span>Less visible</span><span>More visible</span></div>
+</div>
 <button class="primary" type="submit">Save preferences</button><p id="feedback" role="status"></p>
 </form>
 <section class="usage"><div class="usage-heading"><h2>API usage</h2><span>THIS EXTENSION</span></div>

@@ -5,6 +5,11 @@ const prompt = el<HTMLTextAreaElement>('prompt');
 const enabled = el<HTMLInputElement>('enabled');
 const opacity = el<HTMLInputElement>('opacity');
 const feedback = el('feedback');
+const displayModes = [...document.querySelectorAll<HTMLInputElement>('input[name="display-mode"]')];
+function showDisplayMode() {
+  for (const radio of displayModes) radio.checked = radio.value === saved.displayMode;
+  el('opacity-controls').hidden = saved.displayMode === 'hide';
+}
 let saved: Settings;
 function mode() { el('mode').textContent = enabled.checked ? 'FOCUS ON' : 'PAUSED'; }
 async function refreshUsage() {
@@ -21,8 +26,14 @@ async function init() {
   const value = await chrome.storage.local.get('settings');
   saved = settingsFrom(value.settings);
   prompt.value = saved.prompt; enabled.checked = saved.enabled; opacity.value = String(Math.round(saved.opacity * 100));
-  el('opacity-value').textContent = `${opacity.value}%`; mode(); await refreshUsage();
+  el('opacity-value').textContent = `${opacity.value}%`; mode(); showDisplayMode(); await refreshUsage();
 }
+for (const radio of displayModes) radio.onchange = async () => {
+  saved = { ...saved, displayMode: radio.value === 'hide' ? 'hide' : 'dim' };
+  showDisplayMode();
+  try { await chrome.storage.local.set({ settings: saved }); feedback.textContent = saved.displayMode === 'hide' ? 'Unrelated videos will be hidden.' : 'Unrelated videos will be dimmed.'; }
+  catch { feedback.textContent = 'Could not save. Try again.'; }
+};
 opacity.oninput = () => { el('opacity-value').textContent = `${opacity.value}%`; };
 enabled.onchange = async () => {
   mode(); saved = { ...saved, enabled: enabled.checked };
@@ -32,7 +43,7 @@ enabled.onchange = async () => {
 el<HTMLFormElement>('preferences').onsubmit = async event => {
   event.preventDefault();
   if (!prompt.value.trim()) { feedback.textContent = 'Describe what you want to watch first.'; return; }
-  saved = { prompt: prompt.value.trim(), enabled: enabled.checked, opacity: Number(opacity.value) / 100 };
+  saved = { ...saved, prompt: prompt.value.trim(), enabled: enabled.checked, opacity: Number(opacity.value) / 100 };
   try { await chrome.storage.local.set({ settings: saved }); feedback.textContent = 'Saved. Your feed will update automatically.'; }
   catch { feedback.textContent = 'Could not save. Try again.'; }
 };
