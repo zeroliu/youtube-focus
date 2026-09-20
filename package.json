@@ -8,13 +8,15 @@
     "check": "tsc --noEmit",
     "test": "vitest run",
     "test:e2e": "npm run build && playwright test",
-    "build:local": "node scripts/build.mjs --local"
+    "build:local": "node scripts/build.mjs --local",
+    "icons": "node scripts/icons.mjs"
   },
   "dependencies": {
     "@typesafe-ai/sdk": "^0.6.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.55.0",
+    "@resvg/resvg-js": "^2.6.2",
     "@types/chrome": "^0.1.0",
     "esbuild": "^0.28.2",
     "jsdom": "^26.1.0",

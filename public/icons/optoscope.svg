@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="body" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#355c48"/><stop offset="1" stop-color="#142e26"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#c9f4d6"/><stop offset=".55" stop-color="#79c8ad"/><stop offset="1" stop-color="#3d9487"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="120" height="120" rx="30" fill="url(#body)"/>
+  <rect x="5" y="5" width="118" height="118" rx="29" fill="none" stroke="#ffffff" stroke-opacity=".12" stroke-width="2"/>
+  <!-- An optical sight: four focus marks frame a luminous glass lens. -->
+  <path d="M49 23H38a15 15 0 0 0-15 15v11M79 23h11a15 15 0 0 1 15 15v11M105 79v11a15 15 0 0 1-15 15H79M49 105H38a15 15 0 0 1-15-15V79" fill="none" stroke="#e6e8ce" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="64" cy="64" r="30" fill="#102b24" stroke="#d9dfbb" stroke-width="5"/>
+  <circle cx="64" cy="64" r="23" fill="url(#glass)"/>
+  <circle cx="64" cy="64" r="11" fill="#183e34"/>
+  <path d="M48 56a19 19 0 0 1 14-11" fill="none" stroke="#f4fff1" stroke-width="5" stroke-linecap="round" opacity=".9"/>
+  <circle cx="72" cy="72" r="3" fill="#b7ebce" opacity=".7"/>
+</svg>
